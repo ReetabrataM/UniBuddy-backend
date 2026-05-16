@@ -4,7 +4,7 @@ const router = express.Router();
 
 const {
   getSearchResults,
-} = require("../controllers/SearchController");
+} = require("../controllers/searchController");
 
 router.get("/", getSearchResults);
 
