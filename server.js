@@ -25,12 +25,12 @@ const server = http.createServer(app);
 // ✅ CLIENT URL
 const CLIENT_URL =
   process.env.CLIENT_URL ||
-  "https://unibuddy-app.netlify.app";
+  "https://unibuddy-app1.vercel.app";
 
 // ✅ SOCKET.IO SETUP
 const io = new Server(server, {
   cors: {
-    origin: "https://unibuddy-app.netlify.app",
+    origin: "https://unibuddy-app1.vercel.app",
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -98,7 +98,7 @@ connectDB();
 // ✅ MIDDLEWARE
 app.use(
   cors({
-    origin: "https://unibuddy-app.netlify.app",
+    origin: "https://unibuddy-app1.vercel.app",
     credentials: true,
   })
 );
