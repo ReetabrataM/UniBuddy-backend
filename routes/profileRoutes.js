@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 
 const Profile = require("../models/Profile");
 
@@ -8,11 +9,26 @@ const Profile = require("../models/Profile");
 // ============================
 router.get("/:userId", async (req, res) => {
   try {
+    const { userId } = req.params;
+
+    // 🔥 VALIDATION FIX
+    if (!userId || userId === "undefined") {
+      return res.status(400).json({
+        message: "Invalid userId",
+      });
+    }
+
+    // 🔥 ObjectId safety check (IMPORTANT)
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        message: "Invalid ObjectId format",
+      });
+    }
+
     const profile = await Profile.findOne({
-      user: req.params.userId,
+      user: userId,
     });
 
-    // if profile doesn't exist, return empty object (so frontend won't break)
     if (!profile) {
       return res.json({});
     }
@@ -30,14 +46,28 @@ router.get("/:userId", async (req, res) => {
 // ============================
 router.put("/:userId", async (req, res) => {
   try {
+    const { userId } = req.params;
+
+    // 🔥 VALIDATION FIX
+    if (!userId || userId === "undefined") {
+      return res.status(400).json({
+        message: "Invalid userId received",
+      });
+    }
+
+    // 🔥 ObjectId safety check
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        message: "Invalid ObjectId format",
+      });
+    }
+
     const updatedProfile = await Profile.findOneAndUpdate(
-      { user: req.params.userId },
-      {
-        $set: req.body,
-      },
+      { user: userId },
+      { $set: req.body },
       {
         new: true,
-        upsert: true, // 🔥 creates profile if not exists
+        upsert: true,
       }
     );
 
