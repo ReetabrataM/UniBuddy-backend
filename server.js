@@ -1,14 +1,14 @@
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-
+const mongoose = require("mongoose");
 require("dotenv").config();
 
 const { Server } = require("socket.io");
 
 const connectDB = require("./config/db");
 
-// ✅ IMPORT ROUTES
+// ================= ROUTES =================
 const matchRoutes = require("./routes/matchRoutes");
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
@@ -16,48 +16,57 @@ const searchRoutes = require("./routes/searchRoutes");
 const candidateRoutes = require("./routes/candidateRoutes");
 const messageRoutes = require("./routes/chatRoutes");
 
-// ✅ INITIALIZE EXPRESS
+// ================= APP INIT =================
 const app = express();
-
-// ✅ CREATE HTTP SERVER
 const server = http.createServer(app);
 
-// ✅ CLIENT URL
+// ================= ENV =================
 const CLIENT_URL =
   process.env.CLIENT_URL ||
   "https://unibuddy-app.netlify.app";
 
-// ✅ SOCKET.IO SETUP
+// ================= MIDDLEWARE =================
+app.use(
+  cors({
+    origin: CLIENT_URL,
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+
+// ================= SOCKET.IO =================
 const io = new Server(server, {
   cors: {
-    origin: "https://unibuddy-app.netlify.app",
+    origin: CLIENT_URL,
     methods: ["GET", "POST"],
     credentials: true,
   },
 });
 
-// ✅ STORE ONLINE USERS
+// ================= ONLINE USERS =================
 const onlineUsers = {};
 
-// ✅ SOCKET CONNECTION
+// ================= SOCKET EVENTS =================
 io.on("connection", (socket) => {
   console.log("✅ User connected:", socket.id);
 
-  // USER JOINS
+  // user joins
   socket.on("join", (userId) => {
+    if (!userId) return;
+
     onlineUsers[userId] = socket.id;
 
     console.log("🟢 Online Users:", onlineUsers);
   });
 
-  // SEND MESSAGE
+  // send message
   socket.on("sendMessage", (data) => {
-    console.log("📩 Message:", data);
+    const { receiverId } = data;
 
-    const receiverSocketId =
-      onlineUsers[data.receiverId];
+    const receiverSocketId = onlineUsers[receiverId];
 
-    // SEND TO RECEIVER
+    // send to receiver
     if (receiverSocketId) {
       io.to(receiverSocketId).emit(
         "receiveMessage",
@@ -65,47 +74,29 @@ io.on("connection", (socket) => {
       );
     }
 
-    // ALSO SEND BACK TO SENDER
+    // send back to sender
     socket.emit("receiveMessage", data);
   });
 
-  // DISCONNECT
+  // disconnect
   socket.on("disconnect", () => {
-    console.log(
-      "❌ User disconnected:",
-      socket.id
-    );
+    console.log("❌ User disconnected:", socket.id);
 
-    for (let userId in onlineUsers) {
-      if (
-        onlineUsers[userId] === socket.id
-      ) {
+    for (const userId in onlineUsers) {
+      if (onlineUsers[userId] === socket.id) {
         delete onlineUsers[userId];
         break;
       }
     }
 
-    console.log(
-      "🔴 Online Users:",
-      onlineUsers
-    );
+    console.log("🔴 Online Users:", onlineUsers);
   });
 });
 
-// ✅ CONNECT DATABASE
+// ================= DATABASE =================
 connectDB();
 
-// ✅ MIDDLEWARE
-app.use(
-  cors({
-    origin: "https://unibuddy-app.netlify.app",
-    credentials: true,
-  })
-);
-
-app.use(express.json());
-
-// ✅ API ROUTES
+// ================= ROUTES =================
 app.use("/api/matches", matchRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
@@ -113,16 +104,22 @@ app.use("/api/search", searchRoutes);
 app.use("/api/candidates", candidateRoutes);
 app.use("/api/chat", messageRoutes);
 
-// ✅ ROOT ROUTE
+// ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
-  res.send("🚀 UniBuddy API Running");
+  res.send("🚀 UniBuddy API Running Successfully");
 });
 
-// ✅ START SERVER
+// ================= ERROR HANDLING =================
+app.use((err, req, res, next) => {
+  console.error("🔥 Server Error:", err);
+  res.status(500).json({
+    message: "Internal Server Error",
+  });
+});
+
+// ================= START SERVER =================
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(
-    `🚀 Server running on port ${PORT}`
-  );
+  console.log(`🚀 Server running on port ${PORT}`);
 });

@@ -1,49 +1,76 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 
 const Profile = require("../models/Profile");
 
-// ============================
-// GET PROFILE (by userId)
-// ============================
+// =========================
+// GET PROFILE
+// =========================
 router.get("/:userId", async (req, res) => {
   try {
-    const profile = await Profile.findOne({
-      user: req.params.userId,
-    });
+    const { userId } = req.params;
 
-    // if profile doesn't exist, return empty object (so frontend won't break)
-    if (!profile) {
-      return res.json({});
+    // safety check
+    if (!userId || userId === "undefined") {
+      return res.status(400).json({
+        message: "Invalid userId",
+      });
     }
 
-    res.json(profile);
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        message: "Invalid ObjectId format",
+      });
+    }
+
+    const profile = await Profile.findOne({ user: userId });
+
+    return res.json(profile || {});
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       message: err.message,
     });
   }
 });
 
-// ============================
-// UPDATE PROFILE (by userId)
-// ============================
+// =========================
+// UPDATE / CREATE PROFILE
+// =========================
 router.put("/:userId", async (req, res) => {
   try {
+    const { userId } = req.params;
+
+    // safety check
+    if (!userId || userId === "undefined") {
+      return res.status(400).json({
+        message: "Invalid userId",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        message: "Invalid ObjectId format",
+      });
+    }
+
     const updatedProfile = await Profile.findOneAndUpdate(
-      { user: req.params.userId },
+      { user: userId },
       {
-        $set: req.body,
+        $set: {
+          ...req.body,
+          user: userId, // ensure always set
+        },
       },
       {
         new: true,
-        upsert: true, // 🔥 creates profile if not exists
+        upsert: true, // create if not exists
       }
     );
 
-    res.json(updatedProfile);
+    return res.json(updatedProfile);
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       message: err.message,
     });
   }

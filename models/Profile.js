@@ -21,6 +21,7 @@ const ProfileSchema = new mongoose.Schema({
   bio: String,
 
   profilePhoto: String,
+
   lookingForPg: {
     type: Boolean,
     default: false,
